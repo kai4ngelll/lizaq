@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>lizaq</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800..900&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;--ink:#0a0a0a;--g1:#e6e6e6;--g2:#bdbdbd;--mute:#8a8a8a;
+  --disp:'Archivo','Arial Black','Helvetica Neue',Arial,sans-serif;
+  box-sizing:border-box}
+html{height:100%;overflow:hidden;overscroll-behavior:none;touch-action:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+*{box-sizing:border-box;margin:0}
+body{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);overflow:hidden;overscroll-behavior:none;touch-action:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;color:var(--ink);font-family:var(--disp);-webkit-tap-highlight-color:transparent;
+  background:#fff}
+.wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
+.mid{flex:1;width:100%;display:flex;align-items:center;justify-content:center;min-height:0;padding:clamp(14px,3vh,34px) 8px}
+.stage{position:relative;width:min(96vw,1280px);height:min(calc(100svh - 90px),820px)}
+#book{position:absolute;overflow:hidden;opacity:0;pointer-events:none;cursor:zoom-in;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.floor{opacity:0;position:absolute;left:6%;right:6%;bottom:-2%;height:6%;background:radial-gradient(closest-side,rgba(0,0,0,.3),transparent);filter:blur(12px);pointer-events:none}
+
+/* ---------- вступление: журнал собирается из кусочков ---------- */
+#book.ready{opacity:1;pointer-events:auto}
+body.intro .floor{opacity:1;transition:opacity 1s 1.5s}
+#intro{position:absolute;pointer-events:none;z-index:6}
+.piece{position:absolute;will-change:transform}
+
+/* ---------- листание: только transform + overflow:hidden, всё считает видеокарта ---------- */
+.cl{position:absolute;left:0;top:0;width:calc(var(--R,2000px)*2);height:var(--R,2000px);overflow:hidden;
+  transform-origin:0 0;will-change:transform;pointer-events:none;visibility:hidden}
+.clipbook{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}
+.shd{position:absolute;left:0;top:0;width:calc(var(--R,2000px)*2);height:var(--sh,120px);transform-origin:0 0;will-change:transform;
+  visibility:hidden;opacity:0;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,.18) 40%,transparent)}
+.fold{position:absolute;left:0;top:0;width:calc(var(--R,2000px)*2);height:var(--fh,96px);transform-origin:0 0;
+  pointer-events:none;display:none;
+  background:linear-gradient(to bottom,rgba(0,0,0,.30) 0,rgba(0,0,0,.12) 14%,rgba(0,0,0,.04) 50%,transparent 100%)}
+.page.flap .fold{display:block}
+.page.flap{box-shadow:0 0 24px 2px rgba(0,0,0,.32)}
+
+.page{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;background:#fbfbfb;overflow:hidden}
+.pg{position:absolute;inset:0;container-type:size;padding:9cqw 9cqw 9cqw;display:flex;flex-direction:column;gap:3.4cqw;background:#fbfbfb;box-shadow:inset 0 0 0 1px rgba(0,0,0,.09)}
+.pg::after{content:"";position:absolute;top:0;bottom:0;width:12cqw;pointer-events:none}
+.page.l .pg::after{right:0;background:linear-gradient(90deg,transparent,rgba(0,0,0,.16))}
+.page.r .pg::after{left:0;background:linear-gradient(270deg,transparent,rgba(0,0,0,.16))}
+
+/* «текст» — просто чёрточки */
+.b{display:block;flex:none;height:1.1cqw;border-radius:1cqw;background:#d6d6d6}
+.b.h{height:5.2cqw;background:var(--ink);border-radius:.4cqw}
+.b.xl{height:8.6cqw}
+.b.s{height:1.6cqw;background:var(--ink);width:14%}
+.b.q{height:2cqw;background:#9d9d9d}
+.txt{display:flex;flex-direction:column;gap:1.7cqw}
+.fill{flex:1;min-height:0;display:flex;flex-direction:column;gap:1.7cqw;overflow:hidden}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:5cqw;flex:1;min-height:0}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2.4cqw}
+.quote{flex:none;display:flex;flex-direction:column;gap:1.9cqw;padding-left:4.2cqw;border-left:.9cqw solid var(--ink);margin:1.6cqw 0}
+.folio{position:absolute;bottom:4cqw;width:6cqw;height:1cqw;background:var(--ink)}
+.page.l .folio{left:9cqw}.page.r .folio{right:9cqw}
+
+#zoom{position:fixed;inset:0;z-index:50;visibility:hidden;cursor:zoom-out;touch-action:none}
+#zoom.on{visibility:visible}
+#zoom.out{visibility:visible;pointer-events:none}
+#zoom .zbg{position:absolute;inset:0;background:#fff;will-change:opacity}
+#zoom .zp{position:absolute;overflow:hidden;background:#fbfbfb;box-shadow:0 0 0 1px rgba(0,0,0,.08);transform-origin:0 0;will-change:transform}
+#zoom .zp .pg::after{display:none}
+.x{position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);right:16px;width:46px;height:46px;border-radius:50%;border:1.5px solid var(--ink);background:#fff;display:none;place-items:center;cursor:pointer;z-index:51}
+#zoom.on~.x{display:grid}
+.x svg{width:14px;height:14px;stroke:var(--ink);stroke-width:2;fill:none}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+@media (max-width:640px){.stage{width:96vw;height:calc(96vw*.674)}}
+@media (prefers-reduced-motion:reduce){#zoom,#zoom .zp{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mid">
+    <div class="stage"><div id="book"></div><div class="floor"></div></div>
+  </div>
+</div>
+<div id="zoom" aria-modal="true"></div>
+<button class="x" id="close" aria-label="Закрыть"><svg viewBox="0 0 14 14"><path d="m1 1 12 12M13 1 1 13"/></svg></button>
+
+<script>
+/* страница закреплена: нельзя приближать, отдалять и сдвигать (в т.ч. в Яндекс Браузере и на iOS) */
+(function(){
+  var stop=function(e){e.preventDefault()};
+  ['gesturestart','gesturechange','gestureend'].forEach(function(t){document.addEventListener(t,stop,{passive:false})});
+  addEventListener('wheel',function(e){if(e.ctrlKey||e.metaKey)e.preventDefault()},{passive:false});
+  addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&['+','-','=','_','0'].indexOf(e.key)>-1)e.preventDefault()});
+  document.addEventListener('dblclick',stop);
+})();
+</script>
+<script>
+(function(){
+  var N=10, MAXS=4;                       // 10 страниц = 5 разворотов (0..4)
+  var book=document.getElementById('book'), stage=document.querySelector('.stage');
+
+  /* ---------- содержимое страниц: только «чёрточки», будто это текст ---------- */
+  var bars=function(n,w){var s='';for(var i=0;i<n;i++)s+='<i class="b" style="width:'+(i===n-1?(w||55):100)+'%"></i>';return s};
+  var L={
+    A:function(){return '<i class="b h" style="width:70%"></i><i class="b s"></i><div class="fill"></div>'},
+    B:function(){return '<i class="b h" style="width:55%"></i><i class="b s"></i><div class="cols"><div class="fill"></div><div class="fill"></div></div>'},
+    C:function(){return '<i class="b h xl" style="width:88%"></i><i class="b h xl" style="width:56%"></i><i class="b s"></i><div class="cols"><div class="fill"></div><div class="fill"></div></div>'},
+    D:function(){return '<i class="b h" style="width:62%"></i><div class="three"><div class="txt">'+bars(9,50)+'</div><div class="txt">'+bars(9,35)+'</div><div class="txt">'+bars(9,65)+'</div></div><div class="fill"></div>'},
+    E:function(){return '<div class="txt">'+bars(6,70)+'</div><div class="quote"><i class="b q" style="width:92%"></i><i class="b q" style="width:78%"></i><i class="b q" style="width:40%"></i></div><div class="fill"></div>'},
+    F:function(){return '<i class="b s"></i><i class="b h" style="width:80%"></i><div class="cols"><div class="fill"></div><div class="fill"></div></div>'}
+  };
+  var inner=['C','B','A','D','E','F','C','A','E','B'];
+
+  // строки текста подбираются под высоту блока, чтобы страница всегда выглядела заполненной
+  function rnd(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  function paragraphs(n,seed){
+    var r=rnd(seed),out=[],i=0;
+    while(i<n){
+      var len=3+Math.floor(r()*6);
+      for(var k=0;k<len&&i<n;k++,i++){out.push(k===len-1?28+Math.floor(r()*47):100)}
+      if(i<n){out.push(0);i++}
+    }
+    while(out.length&&out[out.length-1]===0)out.pop();
+    if(out.length&&out[out.length-1]===100)out[out.length-1]=35+Math.floor(r()*45);
+    return out.map(function(w){return w?'<i class="b" style="width:'+w+'%"></i>':'<i class="b" style="visibility:hidden"></i>'}).join('');
+  }
+  function fillAll(root){
+    [].forEach.call(root.querySelectorAll('.pg'),function(p){
+      var pw=p.clientWidth;if(!pw)return;
+      var gap=pw*.017,pitch=pw*.028,seed=(+p.getAttribute('data-i')||0)*13+5;
+      [].forEach.call(p.querySelectorAll('.fill'),function(f,fi){
+        var n=Math.floor((f.clientHeight+gap)/pitch);
+        f.innerHTML=n>0?paragraphs(n,seed+fi*7):'';
+      });
+    });
+  }
+
+  /* ---------- DOM: у каждой страницы своя обрезающая обёртка ---------- */
+  var cl=[],pg=[],fold=[];
+  inner.forEach(function(t,i){
+    var c=document.createElement('div');c.className='cl';
+    var p=document.createElement('div');p.className='page '+(i%2===0?'l':'r');
+    p.innerHTML='<div class="pg" data-i="'+i+'">'+L[t]()+'<i class="folio"></i></div><div class="fold"></div>';
+    c.appendChild(p);book.appendChild(c);
+    cl.push(c);pg.push(p);fold.push(p.querySelector('.fold'));
+  });
+  var cb=document.createElement('div');cb.className='clipbook';
+  var shd={f:document.createElement('div'),b:document.createElement('div')};
+  shd.f.className=shd.b.className='shd';cb.appendChild(shd.f);cb.appendChild(shd.b);book.appendChild(cb);
+
+  /* ================= загиб страницы =================
+     Линия сгиба — серединный перпендикуляр к отрезку «угол → палец».
+     Верхний лист обрезается по этой линии (повёрнутая обёртка с overflow:hidden),
+     а его обратная сторона — следующая страница — рисуется зеркально
+     относительно линии сгиба. Под сгибом виден следующий лист. */
+  var Pw=0,H=0,R=0,REST=24,HOVER=40;
+  var s=0,mode='idle',raf=0,restRaf=0,lastT=0;
+  var aF=0,aB=0,tF=0,tB=0;                 // размер «отогнутого уголка» справа/слева внизу
+  var live=false,introActive=false,iw=0,ih=0,ov=null,anims=[];
+
+  var easeOutCubic=function(t){return 1-Math.pow(1-t,3)};
+  var easeInOutCubic=function(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
+  var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
+  var mul=function(p,q){return[p[0]*q[0]+p[2]*q[1],p[1]*q[0]+p[3]*q[1],p[0]*q[2]+p[2]*q[3],p[1]*q[2]+p[3]*q[3],p[0]*q[4]+p[2]*q[5]+p[4],p[1]*q[4]+p[3]*q[5]+p[5]]};
+  var inv=function(m){var d=m[0]*m[3]-m[1]*m[2],A=m[3]/d,B=-m[1]/d,C=-m[2]/d,D=m[0]/d;return[A,B,C,D,-(A*m[4]+C*m[5]),-(B*m[4]+D*m[5])]};
+  var css=function(m){return'matrix('+m.map(function(v){return+v.toFixed(5)}).join(',')+')'};
+  var wrapMat=function(M,n){var ux=-n.y,uy=n.x,vx=-n.x,vy=-n.y;return[ux,uy,vx,vy,M.x-R*ux,M.y-R*uy]};
+  var FULL=function(){return wrapMat({x:0,y:0},{x:0,y:-1})};          // обёртка на весь разворот
+  var slot=function(i){return i%2===0?[1,0,0,1,0,0]:[1,0,0,1,Pw,0]};   // где страница лежит в покое
+  var MIR=function(){return[-1,0,0,1,2*Pw,0]};                          // зеркало относительно корешка
+
+  var can=function(dir){return dir==='f'?s<MAXS:s>0};
+  var roles=function(dir){return dir==='f'?{sheet:2*s+1,flap:2*s+2,under:2*s+3}:{sheet:2*s,flap:2*s-1,under:2*s-2}};
+  var ok=function(i){return i>=0&&i<N};
+
+  function place(i,Wm,B){
+    cl[i].style.transform=css(Wm);
+    pg[i].style.transform=css(mul(inv(Wm),B));
+  }
+  function show(i,z){cl[i].style.visibility='visible';cl[i].style.zIndex=z}
+  function hideFold(dir){
+    var o=roles(dir);shd[dir].style.visibility='hidden';
+    if(ok(o.flap)){cl[o.flap].style.visibility='hidden';pg[o.flap].classList.remove('flap')}
+    if(ok(o.under))cl[o.under].style.visibility='hidden';
+  }
+  // чистое состояние: видны только две страницы текущего разворота
+  function layoutBase(){
+    for(var i=0;i<N;i++){cl[i].style.visibility='hidden';pg[i].classList.remove('flap')}
+    [2*s,2*s+1].forEach(function(i){show(i,2);place(i,FULL(),slot(i))});
+    shd.f.style.visibility=shd.b.style.visibility='hidden';
+  }
+
+  var rest=function(dir,cy,a){var ix=dir==='f'?-1:1,iy=cy===H?-1:1,Cx=dir==='f'?2*Pw:0;return{x:Cx+ix*a,y:cy+iy*a}};
+
+  function drawFold(dir,cy,P){
+    var o=roles(dir),f=dir==='f',Cx=f?2*Pw:0;
+    var dx=Cx-P.x,dy=cy-P.y,d=Math.hypot(dx,dy);
+    if(d<1){place(o.sheet,FULL(),slot(o.sheet));hideFold(dir);return}
+    var n={x:dx/d,y:dy/d},M={x:(P.x+Cx)/2,y:(P.y+cy)/2};
+    var Wm=wrapMat(M,n),Wt=wrapMat({x:M.x+n.x*.8,y:M.y+n.y*.8},n);   // +0.8px под загиб, чтобы не было шва
+    show(o.sheet,2);place(o.sheet,Wt,slot(o.sheet));
+    show(o.under,1);place(o.under,FULL(),slot(o.under));
+    var m=M.x*n.x+M.y*n.y;
+    var refl=[1-2*n.x*n.x,-2*n.x*n.y,-2*n.x*n.y,1-2*n.y*n.y,2*m*n.x,2*m*n.y];
+    var F=mul(inv(Wm),mul(refl,mul(MIR(),slot(o.flap))));
+    show(o.flap,4);pg[o.flap].classList.add('flap');
+    cl[o.flap].style.transform=css(Wm);pg[o.flap].style.transform=css(F);
+    fold[o.flap].style.transform=css(inv(F));                      // тень на изгибе привязана к линии сгиба
+    var sh=shd[dir],sl=parseFloat(book.style.getPropertyValue('--sh'))||120;
+    sh.style.visibility='visible';sh.style.opacity=Math.min(1,d/(Pw*.22)).toFixed(3);
+    sh.style.transform=css([Wm[0],Wm[1],Wm[2],Wm[3],Wm[4]-sl*Wm[2],Wm[5]-sl*Wm[3]]);
+  }
+  function drawIdle(){
+    ['f','b'].forEach(function(dir){
+      if(!can(dir))return;
+      drawFold(dir,H,rest(dir,H,dir==='f'?aF:aB));
+    });
+  }
+  function setTargets(hover){
+    tF=can('f')?(hover==='f'?HOVER:REST):0;
+    tB=can('b')?(hover==='b'?HOVER:REST):0;
+    kick();
+  }
+  function kick(){if(!restRaf&&mode==='idle'){lastT=performance.now();restRaf=requestAnimationFrame(restStep)}}
+  function restStep(){
+    restRaf=0;if(mode!=='idle')return;
+    var now=performance.now(),k=1-Math.exp(-Math.min(50,now-lastT)/90);lastT=now;
+    aF+=(tF-aF)*k;aB+=(tB-aB)*k;
+    if(Math.abs(tF-aF)<.2)aF=tF;if(Math.abs(tB-aB)<.2)aB=tB;
+    drawIdle();
+    if(aF!==tF||aB!==tB)restRaf=requestAnimationFrame(restStep);
+  }
+  function toIdle(grow){
+    mode='idle';layoutBase();
+    if(grow){aF=aB=0}
+    setTargets(null);drawIdle();
+  }
+
+  function run(dur,fn,done){
+    cancelAnimationFrame(raf);
+    var t0=performance.now();
+    (function step(t){
+      var k=Math.max(0,Math.min(1,(t-t0)/dur));
+      fn(k);
+      if(k<1)raf=requestAnimationFrame(step);else if(done)done();
+    })(t0);
+  }
+
+  // завершить перелистывание (go) или вернуть уголок
+  function finish(dir,cy,from,go,tap){
+    mode='anim';cancelAnimationFrame(restRaf);restRaf=0;
+    var f=dir==='f';
+    var to=go?{x:f?0:2*Pw,y:cy}:rest(dir,cy,cy===H?(f?aF:aB):0);
+    var dist=Math.hypot(to.x-from.x,to.y-from.y);
+    var dur=go?(tap?1250:Math.min(1100,Math.max(560,dist/Pw*720+300))):420;
+    var lift=go?H*(tap?.10:.04)*(cy===H?-1:1):0;
+    var ease=(go&&tap)?easeInOutCubic:easeOutCubic;
+    run(dur,function(k){
+      var e=ease(k);
+      drawFold(dir,cy,{x:from.x+(to.x-from.x)*e,y:from.y+(to.y-from.y)*e+Math.sin(Math.PI*e)*lift});
+    },function(){
+      if(go){s+=f?1:-1}
+      toIdle(go);
+    });
+  }
+  // листание по тапу на уголок / по стрелкам
+  function autoFlip(dir,cy){
+    if(!live||mode!=='idle'||!can(dir))return;
+    cy=cy===0?0:H;
+    mode='drag';layoutBase();
+    var from=rest(dir,cy,Math.max(cy===H?(dir==='f'?aF:aB):0,REST*.7));
+    drawFold(dir,cy,from);
+    finish(dir,cy,from,true,true);
+  }
+
+  /* ---------- пальцы и мышь ---------- */
+  var dn=null;
+  var rect=function(){return book.getBoundingClientRect()};
+
+  function startDrag(dir,cy,e){
+    var f=dir==='f';
+    mode='drag';cancelAnimationFrame(restRaf);restRaf=0;layoutBase();
+    var a0=cy===H?(f?aF:aB):0;
+    var P0=rest(dir,cy,a0);
+    dn.drag={dir:dir,cy:cy,sx:dn.x,sy:dn.y,P:{x:P0.x,y:P0.y},tgt:{x:P0.x,y:P0.y},last:0,
+             hist:[{t:performance.now(),tr:0}]};
+    drawFold(dir,cy,P0);
+    raf=requestAnimationFrame(dragLoop);
+  }
+  function target(dr,px,py){
+    var f=dr.dir==='f',Cx=f?2*Pw:0,ix=f?-1:1,iy=dr.cy===H?-1:1;
+    var P={x:Cx+ix*REST+(px-dr.sx),y:dr.cy+iy*REST+(py-dr.sy)};
+    P.x=f?Math.min(P.x,Cx-8):Math.max(P.x,Cx+8);
+    P.y=dr.cy===H?clamp(P.y,0,H-8):clamp(P.y,8,H);
+    var vx=P.x-Pw,vy=P.y-dr.cy,dist=Math.hypot(vx,vy);              // бумага не растягивается: угол не дальше ширины страницы от корешка
+    if(dist>Pw*.999){var k=Pw*.999/dist;P.x=Pw+vx*k;P.y=dr.cy+vy*k}
+    return P;
+  }
+  // страница догоняет палец с небольшой инерцией — движение мягкое
+  function dragLoop(t){
+    if(mode!=='drag'||!dn||!dn.drag)return;
+    var dr=dn.drag,dt=dr.last?Math.min(50,t-dr.last):16;dr.last=t;
+    var k=1-Math.exp(-dt/40);
+    dr.P.x+=(dr.tgt.x-dr.P.x)*k;dr.P.y+=(dr.tgt.y-dr.P.y)*k;
+    drawFold(dr.dir,dr.cy,dr.P);
+    raf=requestAnimationFrame(dragLoop);
+  }
+  var travel=function(dr,P){var f=dr.dir==='f';return(f?-1:1)*(P.x-(f?2*Pw:0))};
+
+  book.addEventListener('pointerdown',function(e){
+    if(mode!=='idle')return;
+    var r=rect();
+    dn={id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now(),bx:e.clientX-r.left,by:e.clientY-r.top,drag:null,pt:e.pointerType};
+    try{book.setPointerCapture(e.pointerId)}catch(_){}
+  });
+  book.addEventListener('pointermove',function(e){
+    var r=rect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    if(dn&&e.pointerId===dn.id){
+      if(!dn.drag){
+        // листание начинается только когда палец реально ведёт страницу к корешку; дрожание пальца при нажатии игнорируется
+        var mdx=e.clientX-dn.x,mdy=e.clientY-dn.y,mm=Math.hypot(mdx,mdy);
+        if(mm>(dn.pt==='mouse'?6:12)){
+          var dir=dn.bx<Pw?'b':'f',toward=dir==='f'?-mdx:mdx;
+          if(can(dir)&&toward>mm*.5)startDrag(dir,dn.by<H/2?0:H,e);
+        }
+      }
+      if(dn.drag){
+        var dr=dn.drag;dr.tgt=target(dr,e.clientX,e.clientY);
+        dr.hist.push({t:performance.now(),tr:travel(dr,dr.tgt)});
+        if(dr.hist.length>8)dr.hist.shift();
+      }
+      return;
+    }
+    var near=(y<r.height*.2||y>r.height*.8)&&(x<r.width*.1||x>r.width*.9);
+    book.style.cursor=near?'pointer':'zoom-in';
+    if(e.pointerType==='mouse'&&mode==='idle'){
+      var cz=Math.max(40,Pw*.24),cv=Math.max(60,H*.3),low=y>H-cv;
+      setTargets(low&&x>2*Pw-cz?'f':(low&&x<cz?'b':null));
+    }
+  });
+  book.addEventListener('pointerleave',function(e){if(!dn&&mode==='idle')setTargets(null)});
+
+  function release(e){
+    if(!dn||e.pointerId!==dn.id)return;
+    var d=dn;dn=null;
+    if(d.drag){
+      var dr=d.drag,tr=travel(dr,dr.tgt),now=performance.now(),ref=dr.hist[0];
+      for(var i=0;i<dr.hist.length;i++)if(now-dr.hist[i].t<=120){ref=dr.hist[i];break}
+      var v=(tr-ref.tr)/Math.max(1,now-ref.t);                       // px/мс в сторону перелистывания
+      var go=e.type!=='pointercancel'&&(tr>Pw*.3||(v>.45&&tr>20));
+      finish(dr.dir,dr.cy,{x:dr.P.x,y:dr.P.y},go,false);
+      return;
+    }
+    if(e.type==='pointercancel')return;
+    var dx=e.clientX-d.x,dy=e.clientY-d.y;
+    var tol=d.pt==='mouse'?7:14;
+    if(Math.abs(dx)>tol||Math.abs(dy)>tol||Date.now()-d.t>450)return;
+    // нажатие на страницу — она плавно приближается (листает только палец)
+    var r=rect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    if(x<0||y<0||x>r.width||y>r.height)return;
+    var left=x<r.width/2;
+    openZ(left?2*s:2*s+1,{left:left?r.left:r.left+Pw,top:r.top,width:Pw,height:r.height});
+  }
+  book.addEventListener('pointerup',release);
+  book.addEventListener('pointercancel',release);
+
+  document.addEventListener('keydown',function(e){
+    if(zoomOpen){if(e.key==='Escape')closeZ();return}
+    if(e.key==='ArrowRight')autoFlip('f',H);
+    if(e.key==='ArrowLeft')autoFlip('b',H);
+  });
+
+  /* ---------- размеры ---------- */
+  function measure(){
+    var sw=stage.clientWidth,sh=stage.clientHeight;
+    if(introActive){if(sw!==iw||sh!==ih)abortIntro();else return}
+    Pw=Math.floor(sw/2);H=Math.floor(sh);
+    R=Math.ceil(Math.hypot(2*Pw,H)*1.1+40);
+    book.style.width=2*Pw+'px';book.style.height=H+'px';
+    book.style.left=Math.floor((sw-2*Pw)/2)+'px';book.style.top=Math.floor((sh-H)/2)+'px';
+    book.style.setProperty('--R',R+'px');
+    book.style.setProperty('--sh',clamp(Pw*.25,40,130)+'px');
+    book.style.setProperty('--fh',clamp(Pw*.15,36,96)+'px');
+    REST=clamp(Pw*.12,14,46);HOVER=clamp(Pw*.19,22,70);
+    pg.forEach(function(p){p.style.width=Pw+'px';p.style.height=H+'px'});
+    fillAll(book);
+    if(mode==='idle'){layoutBase();if(live)setTargets(null);drawIdle()}
+  }
+  var mq=0;
+  if(window.ResizeObserver)new ResizeObserver(function(){cancelAnimationFrame(mq);mq=requestAnimationFrame(measure)}).observe(stage);
+  addEventListener('resize',function(){cancelAnimationFrame(mq);mq=requestAnimationFrame(measure)});
+  measure();
+
+  /* ---------- вступление: журнал собирается из кусочков, летящих с углов экрана (~1.5 с) ---------- */
+  function ready(){
+    if(live)return;live=true;introActive=false;
+    book.classList.add('ready');
+    layoutBase();aF=aB=0;drawIdle();
+    requestAnimationFrame(function(){requestAnimationFrame(function(){if(ov){ov.remove();ov=null}})});
+    setTimeout(function(){setTargets(null)},200);       // уголки плавно отгибаются
+  }
+  function abortIntro(){anims.forEach(function(a){try{a.cancel()}catch(_){}});ready()}
+
+  function shards(){
+    var COLS=6,ROWS=8,tw=Pw/COLS,th=H/ROWS,V=[],hM=[],vM=[],i,j,rand=Math.random;
+    function mid(A,B,wob,sz){
+      var t=.4+.2*rand(),x=A[0]+(B[0]-A[0])*t,y=A[1]+(B[1]-A[1])*t;
+      if(wob){var dx=B[0]-A[0],dy=B[1]-A[1],l=Math.hypot(dx,dy)||1,o=(rand()-.5)*.34*sz;x+=-dy/l*o;y+=dx/l*o}
+      return[x,y];
+    }
+    for(j=0;j<=ROWS;j++){V[j]=[];for(i=0;i<=COLS;i++){
+      var x=i*tw,y=j*th;
+      if(i>0&&i<COLS)x+=(rand()-.5)*.44*tw;
+      if(j>0&&j<ROWS)y+=(rand()-.5)*.44*th;
+      V[j][i]=[x,y];
+    }}
+    var sz=Math.min(tw,th);
+    for(j=0;j<=ROWS;j++){hM[j]=[];for(i=0;i<COLS;i++)hM[j][i]=mid(V[j][i],V[j][i+1],j>0&&j<ROWS,sz)}
+    for(j=0;j<ROWS;j++){vM[j]=[];for(i=0;i<=COLS;i++)vM[j][i]=mid(V[j][i],V[j+1][i],i>0&&i<COLS,sz)}
+    var out=[];
+    for(j=0;j<ROWS;j++)for(i=0;i<COLS;i++)
+      out.push([V[j][i],hM[j][i],V[j][i+1],vM[j][i+1],V[j+1][i+1],hM[j+1][i],V[j+1][i],vM[j][i]]);
+    return out;
+  }
+  function inflate(p,e){                                   // чуть увеличиваем кусочек, чтобы между соседями не было швов
+    var cx=0,cy=0;p.forEach(function(v){cx+=v[0];cy+=v[1]});cx/=p.length;cy/=p.length;
+    return p.map(function(v){var dx=v[0]-cx,dy=v[1]-cy,l=Math.hypot(dx,dy)||1;return[v[0]+dx/l*e,v[1]+dy/l*e]});
+  }
+
+  // страница рисуется один раз в картинку (чёрточки берём из вёрстки), осколки вырезаются из неё
+  function rrect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.lineTo(x+w-r,y);g.arcTo(x+w,y,x+w,y+r,r);g.lineTo(x+w,y+h-r);g.arcTo(x+w,y+h,x+w-r,y+h,r);g.lineTo(x+r,y+h);g.arcTo(x,y+h,x,y+h-r,r);g.lineTo(x,y+r);g.arcTo(x,y,x+r,y,r);g.closePath()}
+  function bitmap(pi,dpr){
+    var el=pg[pi].querySelector('.pg'),base=el.getBoundingClientRect();
+    var c=document.createElement('canvas');c.width=Math.ceil(Pw*dpr);c.height=Math.ceil(H*dpr);
+    var g=c.getContext('2d');g.scale(dpr,dpr);
+    g.fillStyle='#fbfbfb';g.fillRect(0,0,Pw,H);
+    [].forEach.call(el.querySelectorAll('.b,.folio,.quote'),function(e){
+      var cs=getComputedStyle(e);if(cs.visibility==='hidden')return;
+      var r=e.getBoundingClientRect(),x=r.left-base.left,y=r.top-base.top;
+      if(e.classList.contains('quote')){g.fillStyle=cs.borderLeftColor;g.fillRect(x,y,parseFloat(cs.borderLeftWidth)||0,r.height);return}
+      g.fillStyle=cs.backgroundColor;
+      rrect(g,x,y,r.width,r.height,Math.min(parseFloat(cs.borderTopLeftRadius)||0,r.height/2,r.width/2));g.fill();
+    });
+    var gw=Pw*.12,gr=pi?g.createLinearGradient(0,0,gw,0):g.createLinearGradient(Pw-gw,0,Pw,0);   // тень у корешка
+    gr.addColorStop(0,pi?'rgba(0,0,0,.16)':'rgba(0,0,0,0)');gr.addColorStop(1,pi?'rgba(0,0,0,0)':'rgba(0,0,0,.16)');
+    g.fillStyle=gr;g.fillRect(pi?0:Pw-gw,0,gw,H);
+    g.fillStyle='rgba(0,0,0,.09)';g.fillRect(0,0,Pw,1);g.fillRect(0,H-1,Pw,1);g.fillRect(0,1,1,H-2);g.fillRect(Pw-1,1,1,H-2);
+    return c;
+  }
+
+  function intro(){
+    document.body.classList.add('intro');
+    var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(!book.animate||reduce||!Pw||!H){ready();return}
+    introActive=true;iw=stage.clientWidth;ih=stage.clientHeight;
+    ov=document.createElement('div');ov.id='intro';
+    ov.style.left=book.style.left;ov.style.top=book.style.top;ov.style.width=2*Pw+'px';ov.style.height=H+'px';
+    stage.appendChild(ov);
+    var or=ov.getBoundingClientRect(),VW=innerWidth,VH=innerHeight,mx=VW/2,my=VH/2;
+    var dpr=Math.min(window.devicePixelRatio||1,2),bm=[bitmap(0,dpr),bitmap(1,dpr)];
+    var list=[],frag=document.createDocumentFragment();
+    [0,1].forEach(function(pi){
+      var offX=pi?Pw:0;
+      shards().forEach(function(poly){
+        var q=inflate(poly,.8),x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+        q.forEach(function(v){x0=Math.min(x0,v[0]);y0=Math.min(y0,v[1]);x1=Math.max(x1,v[0]);y1=Math.max(y1,v[1])});
+        x0=Math.max(0,Math.floor(x0));y0=Math.max(0,Math.floor(y0));x1=Math.min(Pw,Math.ceil(x1));y1=Math.min(H,Math.ceil(y1));
+        var bw=x1-x0,bh=y1-y0;
+        var cv=document.createElement('canvas');cv.className='piece';
+        cv.width=Math.ceil(bw*dpr);cv.height=Math.ceil(bh*dpr);
+        cv.style.cssText='left:'+(offX+x0)+'px;top:'+y0+'px;width:'+bw+'px;height:'+bh+'px';
+        var g=cv.getContext('2d');g.scale(dpr,dpr);
+        g.beginPath();q.forEach(function(v,i){var X=v[0]-x0,Y=v[1]-y0;if(i)g.lineTo(X,Y);else g.moveTo(X,Y)});g.closePath();g.clip();
+        g.drawImage(bm[pi],x0*dpr,y0*dpr,bw*dpr,bh*dpr,0,0,bw,bh);
+        frag.appendChild(cv);
+        list.push({el:cv,cx:or.left+offX+x0+bw/2,cy:or.top+y0+bh/2});
+      });
+    });
+    ov.appendChild(frag);
+    var n=list.length,ang=[],dly=[],k;
+    for(k=0;k<n;k++){ang.push(k/n*Math.PI*2+(Math.random()-.5)*Math.PI*2/n);dly.push(k/(n-1)*1740+Math.random()*10)}
+    var shuffle=function(a){for(var i=a.length-1;i>0;i--){var r=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[r];a[r]=t}};
+    shuffle(ang);shuffle(dly);                                // осколки летят со всех сторон и в разное время
+    anims=list.map(function(it,k){
+      var c=Math.cos(ang[k]),s=Math.sin(ang[k]);
+      var edge=Math.min(c?mx/Math.abs(c):1e9,s?my/Math.abs(s):1e9);       // расстояние от центра до края экрана
+      var sx=mx+c*edge*1.35+(Math.random()-.5)*VW*.08,sy=my+s*edge*1.35+(Math.random()-.5)*VH*.08;
+      var rot=(Math.random()<.5?-1:1)*(180+Math.random()*260),sc=.4+Math.random()*.4;
+      return it.el.animate(
+        [{transform:'translate('+(sx-it.cx)+'px,'+(sy-it.cy)+'px) rotate('+rot+'deg) scale('+sc+')'},
+         {transform:'translate(0px,0px) rotate(0deg) scale(1)'}],
+        {duration:760,delay:dly[k],easing:'cubic-bezier(.08,.9,.2,1)',fill:'both'});   // каждый осколок вылетает очень быстро
+    });
+    var fin=anims.map(function(a){return a.finished}).filter(Boolean);
+    if(fin.length===anims.length)Promise.all(fin).then(ready,ready);else setTimeout(ready,2600);
+    setTimeout(ready,4500);                                  // страховка
+  }
+  intro();
+
+  /* ---------- крупный просмотр страницы ---------- */
+  /* ---------- страница на весь экран ----------
+     Страница целиком (в полном размере, чтобы была чёткой) плавно «приближается» из своего места в журнале
+     одним равномерным масштабированием — без искажений, перерисовки и смены содержимого. */
+  var z=document.getElementById('zoom'),zoomOpen=false,zp=null,zbg=null,zBase=null,zFrom=null,zT=0,zAt=0;
+  var rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function openZ(i,from){
+    if(zoomOpen)return;
+    clearTimeout(zT);z.classList.remove('out');
+    zoomOpen=true;zAt=performance.now();
+    var VW=innerWidth,VH=innerHeight;zVW=VW;zVH=VH;
+    var k=Math.min(VW/Pw,VH/H)*(VW<=640?1:.94);                  // максимально большая, с теми же пропорциями
+    var w=Math.round(Pw*k),h=Math.round(H*k),l=Math.round((VW-w)/2),t=Math.round((VH-h)/2);
+    z.innerHTML='';
+    zbg=document.createElement('div');zbg.className='zbg';
+    zp=document.createElement('div');zp.className='zp';
+    zp.style.cssText='width:'+w+'px;height:'+h+'px;left:'+l+'px;top:'+t+'px';
+    zp.appendChild(pg[i].querySelector('.pg').cloneNode(true));
+    z.appendChild(zbg);z.appendChild(zp);z.classList.add('on');
+    zBase={left:l,top:t,width:w,height:h};zFrom=from;
+    if(!zp.animate)return;
+    var sc=from.width/w,dx=from.left-l,dy=from.top-t;
+    zp.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sc+')'},{transform:'none'}],
+      {duration:rm?1:720,easing:'cubic-bezier(.22,.8,.2,1)',fill:'both'});
+    zbg.animate([{opacity:0},{opacity:1}],{duration:rm?1:520,easing:'ease',fill:'both'});
+  }
+  // выход: страница плавно возвращается на своё место, снова виден весь журнал
+  function closeZ(){
+    if(!zoomOpen)return;zoomOpen=false;
+    z.classList.add('out');z.classList.remove('on');
+    var el=zp,bg=zbg;
+    if(el.animate){
+      var cur=getComputedStyle(el).transform,cb=getComputedStyle(bg).opacity;
+      el.getAnimations().forEach(function(a){a.cancel()});bg.getAnimations().forEach(function(a){a.cancel()});
+      var sc=zFrom.width/zBase.width,dx=zFrom.left-zBase.left,dy=zFrom.top-zBase.top;
+      el.animate([{transform:cur},{transform:'translate('+dx+'px,'+dy+'px) scale('+sc+')'}],
+        {duration:rm?1:560,easing:'cubic-bezier(.5,0,.2,1)',fill:'both'});
+      bg.animate([{opacity:cb},{opacity:0}],{duration:rm?1:420,easing:'ease',fill:'both'});
+    }
+    clearTimeout(zT);zT=setTimeout(function(){if(!zoomOpen){z.classList.remove('out');z.innerHTML=''}},rm?20:600);
+  }
+  // сразу после открытия игнорируем "призрачный" клик от того же нажатия — иначе страница сразу закроется
+  var zDn=null,zVW=0,zVH=0;
+  function zPress(e){zDn={id:e.pointerId,x:e.clientX,y:e.clientY}}
+  function zRelease(e){
+    var d=zDn;zDn=null;
+    if(!d||d.id!==e.pointerId||!zoomOpen)return;
+    if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>20)return;
+    closeZ();
+  }
+  var xBtn=document.getElementById('close');
+  [z,xBtn].forEach(function(el){
+    el.addEventListener('pointerdown',zPress);
+    el.addEventListener('pointerup',zRelease);
+    el.addEventListener('pointercancel',function(){zDn=null});
+  });
+  xBtn.addEventListener('click',function(e){if(e.detail===0)closeZ()});     // кнопка с клавиатуры
+  // небольшие скачки размера окна (панели браузера) приближённую страницу не закрывают
+  addEventListener('resize',function(){
+    if(zoomOpen&&(Math.abs(innerWidth-zVW)>60||Math.abs(innerHeight-zVH)>150)){zoomOpen=false;z.classList.remove('on','out');z.innerHTML=''}
+  });
+})();
+</script>
+</body>
+</html>
